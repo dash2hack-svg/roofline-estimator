@@ -1,5 +1,7 @@
 # Roofline Estimator
 
+**Source repository:** https://github.com/dash2hack-svg/roofline-estimator
+
 Roofline is a mobile-first roofing estimating workspace with:
 
 - Address lookup and manual/AR measurement workflows
