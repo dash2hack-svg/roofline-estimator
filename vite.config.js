@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  base: './',
   plugins: [
     react(),
     VitePWA({
@@ -12,7 +13,8 @@ export default defineConfig({
         name: 'Roofline Estimator',
         short_name: 'Roofline',
         description: 'Roof measurement, material planning, and project estimating for roofing crews.',
-        start_url: '/',
+        start_url: './',
+        scope: './',
         display: 'standalone',
         background_color: '#f4f7f8',
         theme_color: '#0d1b2a',
