@@ -221,17 +221,43 @@ function App() {
       setAddressLookupLoading(true);
       setAddressLookupError('');
       try {
-        const response = await fetch(`https://photon.komoot.io/reverse?lon=${coords.longitude}&lat=${coords.latitude}&limit=1&lang=en`);
-        if (!response.ok) throw new Error('Reverse geocoding failed');
-        const data = await response.json();
-        const feature = data.features?.[0];
-        const p = feature?.properties || {};
-        const label = [p.housenumber, p.street, p.city || p.town || p.village, p.state, p.postcode].filter(Boolean).join(', ');
-        if (!label) throw new Error('No address found for this location');
-        chooseAddress(label);
-        setToast('Address resolved from your location.');
+        if (!Number.isFinite(coords?.latitude) || !Number.isFinite(coords?.longitude)) throw new Error('GPS coordinates unavailable');
+        if (coords.accuracy && coords.accuracy > 500) throw new Error('GPS is too inaccurate');
+
+        const candidates = [];
+        const esriUrl = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?location=${coords.longitude},${coords.latitude}&distance=100&outSR=4326&langCode=en&f=json`;
+        try {
+          const esriResponse = await fetch(esriUrl);
+          if (esriResponse.ok) {
+            const esri = await esriResponse.json();
+            const address = esri.address || {};
+            const match = address.Match_addr || address.LongLabel;
+            if (match) candidates.push(match);
+            const parts = [address.Address, address.Neighborhood, address.City, address.Region, address.Postal].filter(Boolean);
+            if (parts.length) candidates.push(parts.join(', '));
+          }
+        } catch {}
+
+        const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${coords.latitude}&lon=${coords.longitude}`;
+        try {
+          const nominatimResponse = await fetch(nominatimUrl, { headers: { 'Accept-Language': 'en-US,en;q=0.9' } });
+          if (nominatimResponse.ok) {
+            const nominatim = await nominatimResponse.json();
+            const p = nominatim.address || {};
+            const house = p.house_number;
+            const street = p.road || p.pedestrian || p.path;
+            if (house && street) {
+              candidates.push([house, street, p.city || p.town || p.village || p.municipality, p.state, p.postcode].filter(Boolean).join(', '));
+            }
+          }
+        } catch {}
+
+        const exactLabel = candidates.map((label) => label.replace(/\s+/g, ' ').trim()).find((label) => /^\d+/.test(label));
+        if (!exactLabel) throw new Error('Exact street address unavailable');
+        chooseAddress(exactLabel);
+        setToast('Street address resolved from your location.');
       } catch {
-        setAddressLookupError('Could not resolve an address at this location.');
+        setAddressLookupError('Could not resolve an exact street address. Move to the street address or enter it manually.');
       } finally {
         setAddressLookupLoading(false);
       }
