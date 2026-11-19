@@ -10,20 +10,71 @@ import './styles.css';
 const defaultCatalog = {
   shingle: [
     { id: 'owens-duration', brand: 'Owens Corning', name: 'Duration® Architectural', color: 'Estate Gray', packSize: 3, unit: 'bundle', price: 39.98 },
+    { id: 'owens-duration-flex', brand: 'Owens Corning', name: 'Duration FLEX®', color: 'Onyx Black', packSize: 3, unit: 'bundle', price: 43.98 },
+    { id: 'owens-trudefinition', brand: 'Owens Corning', name: 'Oakridge® TruDefinition®', color: 'Driftwood', packSize: 3, unit: 'bundle', price: 34.98 },
+    { id: 'owens-sure-nail', brand: 'Owens Corning', name: 'Supreme®', color: 'Brownwood', packSize: 3, unit: 'bundle', price: 29.98 },
     { id: 'gaf-hdz', brand: 'GAF', name: 'Timberline HDZ®', color: 'Charcoal', packSize: 3, unit: 'bundle', price: 37.5 },
+    { id: 'gaf-hdz-rs', brand: 'GAF', name: 'Timberline HDZ® RS', color: 'Weathered Wood', packSize: 3, unit: 'bundle', price: 39.5 },
+    { id: 'gaf-solaris', brand: 'GAF', name: 'Timberline® UHDZ with Solaris', color: 'Charcoal', packSize: 3, unit: 'bundle', price: 49.5 },
+    { id: 'gaf-royal-sovereign', brand: 'GAF', name: 'Royal Sovereign®', color: 'Slate', packSize: 3, unit: 'bundle', price: 26.5 },
     { id: 'certainteed-landmark', brand: 'CertainTeed', name: 'Landmark® Pro', color: 'Weathered Wood', packSize: 3, unit: 'bundle', price: 44.25 },
+    { id: 'certainteed-landmark-sbd', brand: 'CertainTeed', name: 'Landmark®', color: 'Moire Black', packSize: 3, unit: 'bundle', price: 37.25 },
+    { id: 'tamko-titan', brand: 'TAMKO', name: 'Titan XT®', color: 'Weathered Wood', packSize: 3, unit: 'bundle', price: 41.5 },
+    { id: 'tamko-heritage', brand: 'TAMKO', name: 'Heritage®', color: 'Black Walnut', packSize: 3, unit: 'bundle', price: 33.5 },
+    { id: 'iko-cambridge', brand: 'IKO', name: 'Cambridge®', color: 'Dual Black', packSize: 3, unit: 'bundle', price: 35.75 },
+    { id: 'iko-dynasty', brand: 'IKO', name: 'Dynasty®', color: 'Summit Grey', packSize: 3, unit: 'bundle', price: 43.75 },
+    { id: 'atlas-pinnacle', brand: 'Atlas', name: 'Pinnacle® Pristine', color: 'Heathered Black', packSize: 3, unit: 'bundle', price: 40.25 },
+    { id: 'malarkey-warranty', brand: 'Malarkey', name: 'Vista® AR', color: 'Natural Wood', packSize: 3, unit: 'bundle', price: 42.5 },
+    { id: 'bp-yukon', brand: 'BP', name: 'Yukon® SB', color: 'Charcoal', packSize: 3, unit: 'bundle', price: 36.75 },
   ],
   underlayment: [
     { id: 'synthetic', name: 'Synthetic underlayment', detail: '10 squares / roll', coverage: 10, unit: 'roll', price: 74.95 },
+    { id: 'gaf-tiger-paw', brand: 'GAF', name: 'Tiger Paw®', detail: '10 squares / roll', coverage: 10, unit: 'roll', price: 79.95 },
+    { id: 'owens-rhino-yth', brand: 'Owens Corning', name: 'RhinoRoof® U20', detail: '10 squares / roll', coverage: 10, unit: 'roll', price: 84.95 },
+    { id: 'certainteed-flintlastic', brand: 'CertainTeed', name: 'Flintlastic® SA', detail: '10 squares / roll', coverage: 10, unit: 'roll', price: 89.95 },
+    { id: 'tamko-pro', brand: 'TAMKO', name: 'Titanium® PSU30', detail: '10 squares / roll', coverage: 10, unit: 'roll', price: 82.95 },
     { id: 'felt', name: '15 lb felt', detail: '4 squares / roll', coverage: 4, unit: 'roll', price: 32.5 },
+    { id: 'felt-30', name: '30 lb felt', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 48.5 },
   ],
   ice: [
     { id: 'ice-standard', name: 'Ice & water shield', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 69.95 },
+    { id: 'gaf-weatherwatch', brand: 'GAF', name: 'WeatherWatch®', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 74.95 },
+    { id: 'gaf-leak-barrier', brand: 'GAF', name: 'Leak Barrier', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 81.95 },
+    { id: 'owens-weatherlock', brand: 'Owens Corning', name: 'WeatherLock® Self-Seal', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 78.95 },
+    { id: 'certainteed-winterguard', brand: 'CertainTeed', name: 'WinterGuard®', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 77.95 },
     { id: 'ice-premium', name: 'High-temp ice & water shield', detail: '2 squares / roll', coverage: 2, unit: 'roll', price: 91.25 },
   ],
   ridge: [
     { id: 'ridge-hip', name: 'Hip & ridge cap shingles', detail: '30 linear ft / bundle', coverage: 30, unit: 'bundle', price: 58.5 },
+    { id: 'gaf-pro', brand: 'GAF', name: 'Pro-Start® / TimberTex®', detail: '20 linear ft / bundle', coverage: 20, unit: 'bundle', price: 62.5 },
+    { id: 'owens-proedge', brand: 'Owens Corning', name: 'ProEdge® Ridge', detail: '35 linear ft / bundle', coverage: 35, unit: 'bundle', price: 64.5 },
+    { id: 'certainteed-shadow', brand: 'CertainTeed', name: 'Shadow Ridge®', detail: '30 linear ft / bundle', coverage: 30, unit: 'bundle', price: 66.5 },
+    { id: 'tamko-ridge', brand: 'TAMKO', name: 'MTX® hip & ridge', detail: '30 linear ft / bundle', coverage: 30, unit: 'bundle', price: 60.5 },
     { id: 'ridge-caps', name: 'High-profile ridge caps', detail: '25 linear ft / bundle', coverage: 25, unit: 'bundle', price: 72 },
+  ],
+  starter: [
+    { id: 'starter-gaf', brand: 'GAF', name: 'WeatherBlocker® Starter', detail: '120 linear ft / bundle', coverage: 120, unit: 'bundle', price: 48.5 },
+    { id: 'starter-owens', brand: 'Owens Corning', name: 'Starter Strip Plus', detail: '105 linear ft / bundle', coverage: 105, unit: 'bundle', price: 46.5 },
+    { id: 'starter-certainteed', brand: 'CertainTeed', name: 'SwiftStart®', detail: '120 linear ft / bundle', coverage: 120, unit: 'bundle', price: 51.5 },
+    { id: 'starter-universal', name: 'Universal starter strip', detail: '120 linear ft / bundle', coverage: 120, unit: 'bundle', price: 42.5 },
+  ],
+  flashing: [
+    { id: 'drip-edge-galvanized', name: 'Galvanized drip edge — 5"', detail: '10 ft piece', coverage: 10, unit: 'piece', price: 8.95 },
+    { id: 'drip-edge-aluminum', name: 'Aluminum drip edge — 5"', detail: '10 ft piece', coverage: 10, unit: 'piece', price: 12.95 },
+    { id: 'step-flashing', name: 'Step flashing — 2" × 3" × 7"', detail: '10 pcs / bundle', coverage: 10, unit: 'bundle', price: 29.95 },
+    { id: 'valley-aluminum', name: 'Aluminum valley flashing — 24"', detail: '10 ft piece', coverage: 10, unit: 'piece', price: 38.95 },
+    { id: 'valley-woven', name: 'Woven valley membrane', detail: '75 ft roll', coverage: 75, unit: 'roll', price: 129.95 },
+  ],
+  fasteners: [
+    { id: 'nails-coil', name: '1¼" roofing coil nails', detail: '7,200 nails / carton', coverage: 7200, unit: 'carton', price: 74.95 },
+    { id: 'nails-coil-15', name: '1½" roofing coil nails', detail: '7,200 nails / carton', coverage: 7200, unit: 'carton', price: 79.95 },
+    { id: 'staples', name: 'Underlayment staples', detail: '5,000 pcs / box', coverage: 5000, unit: 'box', price: 44.95 },
+  ],
+  ventilation: [
+    { id: 'ridge-vent-12', name: '12" shingle-over ridge vent', detail: '4 ft section', coverage: 4, unit: 'section', price: 24.95 },
+    { id: 'ridge-vent-9', name: '9" shingle-over ridge vent', detail: '4 ft section', coverage: 4, unit: 'section', price: 19.95 },
+    { id: 'box-vent', name: 'Aluminum box vent', detail: 'Per vent', coverage: 1, unit: 'vent', price: 18.95 },
+    { id: 'turtle-vent', name: 'Turtle vent', detail: 'Per vent', coverage: 1, unit: 'vent', price: 21.95 },
   ],
 };
 
@@ -64,9 +115,18 @@ const quantity = (value) => Math.max(0, Math.ceil(value));
 const readStorage = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
 };
+const readCatalog = () => {
+  const saved = readStorage('roofline-catalog', defaultCatalog);
+  return Object.fromEntries(Object.keys(defaultCatalog).map((type) => {
+    const savedItems = Array.isArray(saved[type]) ? saved[type] : [];
+    const extras = savedItems.filter((item) => item.id?.startsWith('custom-'));
+    const mergedDefaults = defaultCatalog[type].map((item) => savedItems.find((savedItem) => savedItem.id === item.id) || item);
+    return [type, [...extras, ...mergedDefaults]];
+  }));
+};
 
 function App() {
-  const [catalog, setCatalog] = useState(() => readStorage('roofline-catalog', defaultCatalog));
+  const [catalog, setCatalog] = useState(readCatalog);
   const [jobs, setJobs] = useState(() => readStorage('roofline-jobs', []));
   const [job, setJob] = useState(() => newEstimate());
   const [activeTab, setActiveTab] = useState('estimate');
@@ -103,10 +163,12 @@ function App() {
   const removePlane = (id) => updateJob({ planes: job.planes.length > 1 ? job.planes.filter((plane) => plane.id !== id) : job.planes });
   const addProduct = (event) => {
     event.preventDefault();
-    const price = Number(catalogForm.price);
-    const coverage = Number(catalogForm.coverage);
+    const fallbackPrice = { shingle: 39.95, underlayment: 74.95, ice: 69.95, ridge: 58.5, starter: 46.5, flashing: 12.95, fasteners: 74.95, ventilation: 24.95 }[catalogType];
+    const fallbackCoverage = { shingle: 3, underlayment: 10, ice: 2, ridge: 30, starter: 120, flashing: 10, fasteners: 7200, ventilation: 1 }[catalogType];
+    const price = catalogForm.price === '' ? fallbackPrice : Number(catalogForm.price);
+    const coverage = catalogForm.coverage === '' ? fallbackCoverage : Number(catalogForm.coverage);
     if (!catalogForm.name.trim() || !Number.isFinite(price) || price < 0 || !Number.isFinite(coverage) || coverage <= 0) {
-      setToast('Enter a product name, valid price, and coverage.'); return;
+      setToast('Enter a product name and valid coverage.'); return;
     }
     const product = { id: `custom-${Date.now()}`, name: catalogForm.name.trim(), brand: catalogForm.brand.trim(), price, coverage, unit: catalogForm.unit, packSize: 3, detail: `${coverage} squares / unit` };
     setCatalog((current) => ({ ...current, [catalogType]: [product, ...current[catalogType]] }));
@@ -114,6 +176,11 @@ function App() {
     setToast('Product added to your catalog.');
   };
   const removeProduct = (type, id) => setCatalog((current) => ({ ...current, [type]: current[type].filter((product) => product.id !== id) }));
+  const updateCatalogPrice = (type, id, price) => setCatalog((current) => ({
+    ...current,
+    [type]: current[type].map((product) => product.id === id ? { ...product, price: Math.max(0, Number(price) || 0) } : product),
+  }));
+  const resetCatalog = () => { setCatalog(defaultCatalog); setToast('Catalog reset to standard product list.'); };
 
   return (
     <div className="app-shell">
@@ -134,7 +201,7 @@ function App() {
         </div>
 
         {activeTab === 'jobs' && <Jobs jobs={jobs} onNew={startNew} onLoad={loadJob} onDelete={(id) => setJobs((current) => current.filter((item) => item.id !== id))} />}
-        {activeTab === 'catalog' && <Catalog catalog={catalog} type={catalogType} setType={setCatalogType} form={catalogForm} setForm={setCatalogForm} onAdd={addProduct} onDelete={removeProduct} />}
+        {activeTab === 'catalog' && <Catalog catalog={catalog} type={catalogType} setType={setCatalogType} form={catalogForm} setForm={setCatalogForm} onAdd={addProduct} onDelete={removeProduct} onPriceChange={updateCatalogPrice} onReset={resetCatalog} />}
         {activeTab === 'estimate' && <div className="workspace">
           <section className="main-column">
             <div className="step-card">
@@ -194,12 +261,45 @@ function StepNumber({ number }) { return <div className="step-number">{number}</
 function CardHeading({ title, description, icon }) { return <div className="card-title-row"><div><h2>{title}</h2><p>{description}</p></div><span className="title-icon">{icon}</span></div>; }
 function ModeButton({ active, onClick, icon, title, detail }) { return <button className={active ? 'mode active' : 'mode'} onClick={onClick}>{icon}<span><b>{title}</b><small>{detail}</small></span>{active && <Check size={16} />}</button>; }
 function CostInput({ label, value, prefix, suffix, onChange }) { return <label>{label}<div className="input-with-unit">{prefix && <span>{prefix}</span>}<input type="number" min="0" value={value} onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))} />{suffix && <span>{suffix}</span>}</div></label>; }
-function ProductSelect({ label, value, options, onChange, isShingle }) { const selected = options.find((option) => option.id === value) || options[0]; return <label className="product-row"><span className="product-label">{label}</span><div className="product-select"><div className={isShingle ? 'product-swatch shingle-swatch' : 'product-swatch'} /><select value={selected.id} onChange={(e) => onChange(e.target.value)}>{options.map((option) => <option value={option.id} key={option.id}>{option.brand ? `${option.brand} · ${option.name} · ${option.color}` : option.name}</option>)}</select><ChevronDown size={16} /><span className="product-price">{money(selected.price)}</span></div></label>; }
+function ProductSelect({ label, value, options, onChange, isShingle }) {
+  const selected = options.find((option) => option.id === value) || options[0];
+  const brands = isShingle ? Array.from(new Set(options.map((item) => item.brand).filter(Boolean))) : [];
+  return <label className="product-row"><span className="product-label">{label}</span><div className="product-select"><div className={isShingle ? 'product-swatch shingle-swatch' : 'product-swatch'} /><select value={selected.id} onChange={(e) => onChange(e.target.value)}>
+    {isShingle ? brands.map((brand) => <optgroup label={brand} key={brand}>{options.filter((option) => option.brand === brand).map((option) => <option value={option.id} key={option.id}>{option.name}{option.color ? ` · ${option.color}` : ''}</option>)}</optgroup>) : options.map((option) => <option value={option.id} key={option.id}>{option.brand ? `${option.brand} · ${option.name}` : option.name}</option>)}
+  </select><ChevronDown size={16} /><span className="product-price">{money(selected.price)}</span></div></label>;
+}
 function EstimateLine({ name, quantityText, cost }) { return <div className="estimate-line"><div><b>{name}</b><span>{quantityText}</span></div><strong>{money(cost)}</strong></div>; }
 function EstimatePanel({ job, totals, onUpdate, onSave, onProposal }) { return <aside className="estimate-panel"><div className="estimate-top"><div><span className="estimate-label">ESTIMATE PREVIEW</span><h2>{job.customer || 'New job'}</h2></div><button className="icon-button" onClick={() => onSave()}><Save size={15} /></button></div><div className="estimate-address"><MapPin size={15} /> <span>{job.address || 'No address selected'}</span><span className={job.propertyLoaded || job.measurementMode === 'manual' ? 'confidence good' : 'confidence'}>{job.propertyLoaded || job.measurementMode === 'manual' ? 'Verified' : 'Draft'}</span></div><div className="total-block"><span>Estimated project total</span><strong>{money(totals.total)}</strong><small>Includes {job.markup}% markup · {job.tax}% tax</small></div><div className="breakdown"><div className="breakdown-heading"><b>Materials</b><span>{money(totals.materialCost)}</span></div><EstimateLine name={totals.selected.shingle.name} quantityText={`${totals.quantities.shingle} bundles`} cost={totals.quantities.shingle * totals.selected.shingle.price} /><EstimateLine name={totals.selected.underlayment.name} quantityText={`${totals.quantities.underlayment} rolls`} cost={totals.quantities.underlayment * totals.selected.underlayment.price} /><EstimateLine name={totals.selected.ice.name} quantityText={`${totals.quantities.ice} rolls`} cost={totals.quantities.ice * totals.selected.ice.price} /><EstimateLine name={totals.selected.ridge.name} quantityText={`${totals.quantities.ridge} bundles`} cost={totals.quantities.ridge * totals.selected.ridge.price} /><div className="breakdown-heading labor"><b>Labor + project costs</b><span>{money(totals.laborCost + job.tearOff + job.disposal + job.permit + totals.tax)}</span></div><EstimateLine name="Installation labor" quantityText={`${totals.squares.toFixed(1)} squares`} cost={totals.laborCost} /></div><div className="estimate-footer"><div><span>Subtotal</span><b>{money(totals.subtotal)}</b></div><button className="primary-button" onClick={onProposal}>Create proposal <ArrowRight size={16} /></button><button className="save-button" onClick={() => onSave()}><Save size={16} /> Save draft</button></div><div className="accuracy-note"><ShieldCheck size={16} /><span>Confirm plane measurements, product coverage, and supplier pricing before ordering.</span></div></aside>; }
 
 function Jobs({ jobs, onNew, onLoad, onDelete }) { return <div className="jobs-panel"><div className="jobs-toolbar"><div className="search-box"><Search size={16} /><input placeholder="Search jobs" /></div><button className="primary-button compact-button" onClick={onNew}><Plus size={16} /> New estimate</button></div>{jobs.length === 0 ? <EmptyState icon={<FileText size={26} />} title="No saved jobs yet" text="Save a draft from the estimate screen and it will appear here on this device." action="Start an estimate" onClick={onNew} /> : <div className="jobs-list">{jobs.map((item) => <div className="job-row" key={item.id}><div className="job-icon"><Building2 size={18} /></div><div className="job-main"><b>{item.customer || 'Unnamed customer'}</b><span>{item.address || 'No address'} · {new Date(item.updatedAt).toLocaleDateString()}</span></div><span className={item.status === 'proposal' ? 'job-status proposal' : 'job-status'}>{item.status}</span><button className="outline-button" onClick={() => onLoad(item)}>Open</button><button className="delete-plane" onClick={() => onDelete(item.id)} aria-label="Delete saved job"><Trash2 size={15} /></button></div>)}</div>}</div>; }
-function Catalog({ catalog, type, setType, form, setForm, onAdd, onDelete }) { const labels = { shingle: 'Shingles', underlayment: 'Underlayment', ice: 'Ice & water', ridge: 'Hip & ridge' }; return <div className="catalog-panel"><div className="catalog-tabs">{Object.keys(labels).map((key) => <button className={type === key ? 'catalog-tab active' : 'catalog-tab'} key={key} onClick={() => setType(key)}>{labels[key]} <span>{catalog[key].length}</span></button>)}</div><div className="catalog-content"><form className="add-product" onSubmit={onAdd}><h2>Add a product</h2><div className="product-form-grid"><input placeholder="Product name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /><input placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} /><input type="number" min="0" step="0.01" placeholder="Price *" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /><input type="number" min="0.1" step="0.1" placeholder={type === 'shingle' ? 'Bundles / square' : 'Coverage'} value={form.coverage} onChange={(e) => setForm({ ...form, coverage: e.target.value })} /><button className="primary-button" type="submit"><Plus size={16} /> Add product</button></div><p>Coverage is used by the estimator to calculate order quantities.</p></form><div className="catalog-list">{catalog[type].map((item) => <div className="catalog-item" key={item.id}><div className="product-swatch shingle-swatch" /><div><b>{item.brand ? `${item.brand} · ` : ''}{item.name}</b><span>{item.detail || `${item.packSize} bundles / square`}</span></div><strong>{money(item.price)}</strong><button className="delete-plane" onClick={() => onDelete(type, item.id)} aria-label={`Delete ${item.name}`}><Trash2 size={15} /></button></div>)}</div></div></div>; }
+function Catalog({ catalog, type, setType, form, setForm, onAdd, onDelete, onPriceChange, onReset }) {
+  const [search, setSearch] = useState('');
+  const [brand, setBrand] = useState('All brands');
+  const labels = { shingle: 'Shingles', underlayment: 'Underlayment', ice: 'Ice & water', ridge: 'Hip & ridge', starter: 'Starter strips', flashing: 'Flashing & valleys', fasteners: 'Nails & fasteners', ventilation: 'Roof ventilation' };
+  const brands = ['All brands', ...Array.from(new Set(catalog[type].map((item) => item.brand).filter(Boolean))).sort()];
+  const visible = catalog[type].filter((item) => {
+    const matchesText = `${item.brand || ''} ${item.name}`.toLowerCase().includes(search.toLowerCase());
+    return matchesText && (brand === 'All brands' || item.brand === brand);
+  });
+  return <div className="catalog-panel">
+    <div className="catalog-tabs">{Object.keys(labels).map((key) => <button className={type === key ? 'catalog-tab active' : 'catalog-tab'} key={key} onClick={() => { setType(key); setSearch(''); setBrand('All brands'); }}>{labels[key]} <span>{catalog[key].length}</span></button>)}</div>
+    <div className="catalog-content">
+      <div className="catalog-search-row"><div className="search-box"><Search size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search brand or product" /></div>{type === 'shingle' || brands.length > 2 ? <select className="brand-select" value={brand} onChange={(e) => setBrand(e.target.value)}>{brands.map((item) => <option key={item}>{item}</option>)}</select> : null}<button className="secondary-button" onClick={onReset}>Reset catalog</button></div>
+      <form className="add-product" onSubmit={onAdd}>
+        <h2>Add a product</h2>
+        <div className="product-form-grid">
+          <input placeholder="Product name *" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input placeholder="Brand" value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} />
+          <input type="number" min="0" step="0.01" placeholder="Price (optional)" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+          <input type="number" min="0.1" step="0.1" placeholder={type === 'shingle' ? 'Bundles / square' : 'Coverage'} value={form.coverage} onChange={(e) => setForm({ ...form, coverage: e.target.value })} />
+          <button className="primary-button" type="submit"><Plus size={16} /> Add product</button>
+        </div>
+        <p>Standard coverage and a starting price are applied automatically when left blank.</p>
+      </form>
+      <div className="catalog-list">{visible.map((item) => <div className="catalog-item" key={item.id}><div className="product-swatch shingle-swatch" /><div><b>{item.brand ? `${item.brand} · ` : ''}{item.name}</b><span>{item.detail || `${item.packSize} bundles / square`}</span></div><label className="catalog-price"><span>My price</span><div><b>$</b><input type="number" min="0" step="0.01" value={item.price} onChange={(e) => onPriceChange(type, item.id, e.target.value)} /></div></label>{item.id.startsWith('custom-') ? <button className="delete-plane" onClick={() => onDelete(type, item.id)} aria-label={`Delete ${item.name}`}><Trash2 size={15} /></button> : null}</div>)}</div>
+    </div>
+  </div>;
+}
 function EmptyState({ icon, title, text, action, onClick }) { return <div className="empty-panel"><div className="empty-icon">{icon}</div><h2>{title}</h2><p>{text}</p><button className="primary-button" onClick={onClick}>{action} <ArrowRight size={16} /></button></div>; }
 function ProposalModal({ job, totals, onClose, onSave }) { return <div className="modal-backdrop" onMouseDown={onClose}><div className="proposal-modal" onMouseDown={(e) => e.stopPropagation()}><div className="modal-header"><div><span className="estimate-label">PROPOSAL PREVIEW</span><h2>{job.customer || 'Customer proposal'}</h2></div><button className="icon-button" onClick={onClose}><X size={16} /></button></div><div className="proposal-meta"><span><UserRound size={14} /> {job.customer || 'Customer name not entered'}</span><span><MapPin size={14} /> {job.address || 'Address not entered'}</span></div><div className="proposal-total"><span>Project total</span><b>{money(totals.total)}</b></div><p className="proposal-note">This proposal includes measured roofing surface, selected products, installation labor, project costs, tax, and contractor markup. Confirm field conditions before final ordering.</p><div className="modal-actions"><button className="outline-button" onClick={onClose}>Keep editing</button><button className="primary-button" onClick={onSave}><Save size={16} /> Save proposal</button></div></div></div>; }
 
