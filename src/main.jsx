@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import './styles.css';
 
+const APP_VERSION = '1.1.0';
+
 const defaultCatalog = {
   shingle: [
     { id: 'owens-duration', brand: 'Owens Corning', name: 'Duration® Architectural', color: 'Estate Gray', packSize: 3, unit: 'bundle', price: 39.98 },
@@ -336,7 +338,7 @@ function App() {
           <NavButton active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')}>Jobs <span className="nav-pill">{jobs.length}</span></NavButton>
           <NavButton active={activeTab === 'catalog'} onClick={() => setActiveTab('catalog')}>Catalog</NavButton>
         </nav>
-        <div className="top-actions"><span className="sync-status"><span className={isOnline ? 'sync-dot' : 'sync-dot offline'} /> {isOnline ? 'Connected · saved on this device' : 'Offline · saved on this device'}</span><button className="avatar">JM</button><button className="menu-toggle" onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button></div>
+        <div className="top-actions"><span className="sync-status"><span className={isOnline ? 'sync-dot' : 'sync-dot offline'} /> {isOnline ? `Connected · v${APP_VERSION}` : `Offline · v${APP_VERSION}`}</span><button className="avatar">JM</button><button className="menu-toggle" onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button></div>
       </header>
 
       <main className="page">
