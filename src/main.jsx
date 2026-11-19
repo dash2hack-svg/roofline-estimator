@@ -160,37 +160,38 @@ function App() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=en`, { signal: controller.signal });
-        if (!response.ok) throw new Error(`Address lookup returned ${response.status}`);
-        const data = await response.json();
-        const suggestions = (data.features || []).map((feature) => {
-          const p = feature.properties || {};
-          const parts = [p.housenumber, p.street, p.district, p.city || p.town || p.village, p.state, p.postcode, p.country].filter(Boolean);
-          return {
-            label: [...new Set(parts)].join(', ').replace(/, ,/g, ','),
-            lat: feature.geometry?.coordinates?.[1],
-            lon: feature.geometry?.coordinates?.[0],
-          };
-        }).filter((item) => item.label);
-        setAddressSuggestions(suggestions);
-        if (!suggestions.length) setAddressLookupError('No matching address found. Check the spelling or enter it manually.');
-      } catch (error) {
-          try {
-            const censusResponse = await fetch(`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(query)}&benchmark=Public_AR_Current&format=json`);
-            if (!censusResponse.ok) throw new Error('Census address lookup unavailable');
-            const census = await censusResponse.json();
-            const matches = census.result?.addressMatches || [];
-            const suggestions = matches.slice(0, 6).map((match) => ({
-              label: match.matchedAddress,
-              lat: match.coordinates?.y,
-              lon: match.coordinates?.x,
-            }));
-            setAddressSuggestions(suggestions);
-            if (!suggestions.length) setAddressLookupError('No matching address found. Check the spelling or enter it manually.');
-          } catch {
-            setAddressSuggestions([]);
-            setAddressLookupError(error.name === 'AbortError' ? 'Address lookup timed out.' : 'Address lookup is unavailable. You can enter the address manually.');
+        if (!/\d/.test(query)) {
+          setAddressSuggestions([]);
+          setAddressLookupError('Enter a house or building number to search.');
+          setAddressLookupLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+        const censusResponse = await fetch(`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(query)}&benchmark=Public_AR_Current&format=json`, { signal: controller.signal });
+        if (!censusResponse.ok) throw new Error('Census address lookup unavailable');
+        const census = await censusResponse.json();
+        let suggestions = (census.result?.addressMatches || []).slice(0, 8).map((match) => ({
+          label: match.matchedAddress,
+          lat: match.coordinates?.y,
+          lon: match.coordinates?.x,
+        })).filter((item) => /^\d/.test(item.label));
+
+        if (!suggestions.length) {
+          const photonResponse = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=10&lang=en&osm_tag=place%3Ahouses`, { signal: controller.signal });
+          if (photonResponse.ok) {
+            const photon = await photonResponse.json();
+            suggestions = (photon.features || []).map((feature) => {
+              const p = feature.properties || {};
+              const parts = [p.housenumber, p.street, p.city || p.town || p.village, p.state, p.postcode].filter(Boolean);
+              return { label: [...new Set(parts)].join(', '), lat: feature.geometry?.coordinates?.[1], lon: feature.geometry?.coordinates?.[0] };
+            }).filter((item) => /^\d/.test(item.label));
           }
+        }
+        setAddressSuggestions(suggestions);
+        if (!suggestions.length) setAddressLookupError('No street address found. Include the house number, street, city, state, and ZIP if known.');
+      } catch (error) {
+        setAddressSuggestions([]);
+        setAddressLookupError(error.name === 'AbortError' ? 'Address lookup timed out.' : 'Address lookup is unavailable. You can enter the exact address manually.');
       } finally {
         clearTimeout(timeoutId);
         setAddressLookupLoading(false);
