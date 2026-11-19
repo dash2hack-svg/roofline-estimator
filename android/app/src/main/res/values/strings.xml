@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Roofline</string>
+    <string name="title_activity_main">Roofline</string>
+    <string name="package_name">com.roofline.estimator</string>
+    <string name="custom_url_scheme">com.roofline.estimator</string>
+</resources>

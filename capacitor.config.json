@@ -1,0 +1,9 @@
+{
+  "appId": "com.roofline.estimator",
+  "appName": "Roofline",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
