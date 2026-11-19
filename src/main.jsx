@@ -91,7 +91,7 @@ const newEstimate = () => ({
   updatedAt: new Date().toISOString(),
   measurementMode: 'property',
   propertyLoaded: false,
-  planes: [{ id: 1, name: 'Main roof', area: 2420, pitch: 6 }],
+  planes: [],
   waste: 12,
   tearOff: 0,
   disposal: 0,
@@ -204,7 +204,7 @@ function App() {
   const totals = useMemo(() => calculateEstimate(job, catalog), [job, catalog]);
 
   const chooseAddress = (address) => {
-    updateJob({ address: typeof address === 'string' ? address : address.label, propertyLoaded: false, measurementMode: 'property', lookupResolved: true });
+    updateJob({ address: typeof address === 'string' ? address : address.label, propertyLoaded: false, measurementMode: 'property', lookupResolved: true, planes: [] });
     setAddressSuggestions([]);
     setAddressLookupError('');
   };
@@ -273,8 +273,20 @@ function App() {
     navigator.geolocation.getCurrentPosition(resolve, () => setToast('Location permission was denied.'));
   };
   const updatePlane = (id, patch) => updateJob({ planes: job.planes.map((plane) => plane.id === id ? { ...plane, ...patch } : plane) });
-  const addPlane = () => updateJob({ planes: [...job.planes, { id: Date.now(), name: `Roof plane ${job.planes.length + 1}`, area: 0, pitch: 6 }] });
-  const removePlane = (id) => updateJob({ planes: job.planes.length > 1 ? job.planes.filter((plane) => plane.id !== id) : job.planes });
+  const addPlane = () => updateJob({ planes: [...job.planes, { id: Date.now(), name: `Roof plane ${job.planes.length + 1}`, length: 0, width: 0, pitch: 0, area: 0, verified: false }] });
+  const removePlane = (id) => updateJob({ planes: job.planes.filter((plane) => plane.id !== id) });
+  const readPitch = async () => {
+    if (!window.DeviceOrientationEvent) { setToast('Pitch sensing is unavailable on this device.'); return; }
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission !== 'granted') { setToast('Motion permission is required for pitch sensing.'); return; }
+      }
+      setToast('Hold the phone on the roof slope, then tap Verify.');
+    } catch {
+      setToast('Pitch sensing is unavailable. Enter pitch manually.');
+    }
+  };
   const capturePhoto = async () => {
     try {
       const photo = await NativeCamera.getPhoto({ quality: 82, resultType: CameraResultType.DataUrl, source: CameraSource.Camera, allowEditing: false });
@@ -349,7 +361,13 @@ function App() {
               </div>
             </div>
 
-            <div className="step-card"><StepNumber number="02" /><div className="card-content"><CardHeading title="Verify roof planes" description="Every plane can have its own area and pitch. The estimate uses the sum." icon={<Compass size={20} />} /><div className="plane-list">{job.planes.map((plane, index) => <div className="plane-row" key={plane.id}><div className="plane-index">{index + 1}</div><input className="plane-name" value={plane.name} onChange={(e) => updatePlane(plane.id, { name: e.target.value })} aria-label="Roof plane name" /><div className="mini-field"><input type="number" min="0" value={plane.area} onChange={(e) => updatePlane(plane.id, { area: Math.max(0, Number(e.target.value) || 0) })} /><span>sq ft</span></div><div className="mini-field pitch-field"><input type="number" min="0" max="24" value={plane.pitch} onChange={(e) => updatePlane(plane.id, { pitch: Math.min(24, Math.max(0, Number(e.target.value) || 0)) })} /><span>/ 12</span></div><button className="delete-plane" onClick={() => removePlane(plane.id)} disabled={job.planes.length === 1} aria-label={`Remove ${plane.name}`}><Trash2 size={15} /></button></div>)}</div><button className="add-plane" onClick={addPlane}><Plus size={15} /> Add roof plane</button><div className="input-grid compact-grid"><label>Waste factor<div className="input-with-unit"><input type="number" min="0" max="40" value={job.waste} onChange={(e) => updateJob({ waste: Math.min(40, Math.max(0, Number(e.target.value) || 0)) })} /><span>%</span></div></label><div className="measurement-stat"><span>Surface area</span><b>{Math.round(totals.surfaceArea).toLocaleString()} sq ft</b></div><div className="measurement-stat"><span>Order quantity</span><b>{totals.adjustedSquares.toFixed(1)} squares</b></div></div></div></div>
+            <div className="step-card"><StepNumber number="02" /><div className="card-content"><CardHeading title="Measure roof planes" description="Enter each plane's true eave-to-ridge length and width, then verify its pitch." icon={<Compass size={20} />} /><button className="add-plane pitch-tool" onClick={readPitch}><Compass size={15} /> Use pitch sensor</button><div className="plane-list">{job.planes.map((plane, index) => {
+              const length = Number(plane.length) || 0;
+              const width = Number(plane.width) || 0;
+              const pitch = Number(plane.pitch) || 0;
+              const area = length * width * Math.sqrt(1 + Math.pow(pitch / 12, 2));
+              return <div className="plane-row" key={plane.id}><div className="plane-index">{index + 1}</div><input className="plane-name" value={plane.name} onChange={(e) => updatePlane(plane.id, { name: e.target.value })} aria-label="Roof plane name" /><div className="mini-field"><input type="number" min="0" step="0.1" value={plane.length || ''} onChange={(e) => updatePlane(plane.id, { length: Math.max(0, Number(e.target.value) || 0) })} /><span>ft long</span></div><div className="mini-field"><input type="number" min="0" step="0.1" value={plane.width || ''} onChange={(e) => updatePlane(plane.id, { width: Math.max(0, Number(e.target.value) || 0) })} /><span>ft wide</span></div><div className="mini-field pitch-field"><input type="number" min="0" max="24" value={plane.pitch || ''} onChange={(e) => updatePlane(plane.id, { pitch: Math.min(24, Math.max(0, Number(e.target.value) || 0)) })} /><span>/ 12</span></div><button className={plane.verified ? 'verify-plane verified' : 'verify-plane'} onClick={() => updatePlane(plane.id, { verified: length > 0 && width > 0 && pitch > 0 })} type="button">{plane.verified ? <Check size={14} /> : 'Verify'}<span>{Math.round(area)} sq ft</span></button><button className="delete-plane" onClick={() => removePlane(plane.id)} aria-label={`Remove ${plane.name}`}><Trash2 size={15} /></button></div>;
+            })}{job.planes.length === 0 && <div className="empty-measurement"><Ruler size={20} /><div><b>No roof planes measured</b><span>Address lookup finds the property only. Measure each roof plane below.</span></div></div>}</div><button className="add-plane" onClick={addPlane}><Plus size={15} /> Add roof plane</button><div className="input-grid compact-grid"><label>Waste factor<div className="input-with-unit"><input type="number" min="0" max="40" value={job.waste} onChange={(e) => updateJob({ waste: Math.min(40, Math.max(0, Number(e.target.value) || 0)) })} /><span>%</span></div></label><div className="measurement-stat"><span>Surface area</span><b>{Math.round(totals.surfaceArea).toLocaleString()} sq ft</b></div><div className="measurement-stat"><span>Order quantity</span><b>{totals.adjustedSquares.toFixed(1)} squares</b></div></div></div></div>
 
             <div className="step-card"><StepNumber number="03" /><div className="card-content"><CardHeading title="Select products" description="Use the actual product and price you plan to install." icon={<BadgeDollarSign size={20} />} /><ProductSelect label="Roofing system" value={job.selected.shingle} options={catalog.shingle} onChange={(value) => updateJob({ selected: { ...job.selected, shingle: value } })} isShingle /><ProductSelect label="Underlayment" value={job.selected.underlayment} options={catalog.underlayment} onChange={(value) => updateJob({ selected: { ...job.selected, underlayment: value } })} /><ProductSelect label="Ice & water shield" value={job.selected.ice} options={catalog.ice} onChange={(value) => updateJob({ selected: { ...job.selected, ice: value } })} /><ProductSelect label="Hip & ridge" value={job.selected.ridge} options={catalog.ridge} onChange={(value) => updateJob({ selected: { ...job.selected, ridge: value } })} /><button className="catalog-link" onClick={() => setActiveTab('catalog')}>Manage your product catalog <ArrowRight size={15} /></button></div></div>
 
@@ -366,8 +384,19 @@ function App() {
 }
 
 function calculateEstimate(job, catalog) {
-  const planes = job.planes.filter((plane) => Number.isFinite(plane.area) && plane.area >= 0);
-  const surfaceArea = planes.reduce((total, plane) => total + plane.area * Math.sqrt(1 + Math.pow(plane.pitch / 12, 2)), 0);
+  const planes = job.planes.filter((plane) => {
+    const length = Number(plane.length) || 0;
+    const width = Number(plane.width) || 0;
+    return length > 0 && width > 0;
+  }).map((plane) => {
+    const length = Number(plane.length) || 0;
+    const width = Number(plane.width) || 0;
+    const pitch = Number(plane.pitch) || 0;
+    const pitchFactor = Math.sqrt(1 + Math.pow(pitch / 12, 2));
+    const area = length * width * pitchFactor;
+    return { ...plane, area };
+  });
+  const surfaceArea = planes.reduce((total, plane) => total + plane.area, 0);
   const squares = surfaceArea / 100;
   const adjustedSquares = squares * (1 + job.waste / 100);
   const selected = {
@@ -387,7 +416,9 @@ function calculateEstimate(job, catalog) {
   const directCost = materialCost + laborCost + job.tearOff + job.disposal + job.permit;
   const tax = (materialCost + job.permit) * (job.tax / 100);
   const subtotal = directCost + tax;
-  return { surfaceArea, squares, adjustedSquares, selected, quantities, materialCost, laborCost, tax, directCost, subtotal, total: subtotal * (1 + job.markup / 100) };
+  const verifiedPlanes = job.planes.filter((plane) => plane.verified && (Number(plane.length) || 0) > 0 && (Number(plane.width) || 0) > 0);
+  const ready = verifiedPlanes.length > 0 && planes.length === job.planes.length;
+  return { surfaceArea, squares, adjustedSquares, selected, quantities, materialCost, laborCost, tax, directCost, subtotal, total: ready ? subtotal * (1 + job.markup / 100) : 0, ready };
 }
 
 function NavButton({ active, onClick, children }) { return <button className={active ? 'nav-link active' : 'nav-link'} onClick={onClick}>{children}</button>; }
