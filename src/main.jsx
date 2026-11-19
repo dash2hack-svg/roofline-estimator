@@ -78,13 +78,6 @@ const defaultCatalog = {
   ],
 };
 
-const sampleAddresses = [
-  '1428 Oak Ridge Drive, Denver, CO',
-  '88 Willow Creek Lane, Austin, TX',
-  '4108 Pinecrest Avenue, Charlotte, NC',
-  '1750 Harbor View Road, Tampa, FL',
-];
-
 const newEstimate = () => ({
   id: `job-${Date.now()}`,
   customer: '',
@@ -134,18 +127,74 @@ function App() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [toast, setToast] = useState('');
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [addressLookupLoading, setAddressLookupLoading] = useState(false);
+  const [addressLookupError, setAddressLookupError] = useState('');
   const [catalogType, setCatalogType] = useState('shingle');
   const [catalogForm, setCatalogForm] = useState({ name: '', brand: '', price: '', coverage: '1', unit: 'bundle' });
 
   useEffect(() => localStorage.setItem('roofline-catalog', JSON.stringify(catalog)), [catalog]);
   useEffect(() => localStorage.setItem('roofline-jobs', JSON.stringify(jobs)), [jobs]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 2800); return () => clearTimeout(timer); }, [toast]);
+  useEffect(() => {
+    const query = job.address.trim();
+    if (query.length < 5 || job.propertyLoaded) {
+      setAddressSuggestions([]);
+      return undefined;
+    }
+    setAddressLookupLoading(true);
+    setAddressLookupError('');
+    const timeout = setTimeout(async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=6&lang=en`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`Address lookup returned ${response.status}`);
+        const data = await response.json();
+        const suggestions = (data.features || []).map((feature) => {
+          const p = feature.properties || {};
+          const parts = [p.housenumber, p.street, p.district, p.city || p.town || p.village, p.state, p.postcode, p.country].filter(Boolean);
+          return {
+            label: [...new Set(parts)].join(', ').replace(/, ,/g, ','),
+            lat: feature.geometry?.coordinates?.[1],
+            lon: feature.geometry?.coordinates?.[0],
+          };
+        }).filter((item) => item.label);
+        setAddressSuggestions(suggestions);
+        if (!suggestions.length) setAddressLookupError('No matching address found. Check the spelling or enter it manually.');
+      } catch (error) {
+          try {
+            const censusResponse = await fetch(`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(query)}&benchmark=Public_AR_Current&format=json`);
+            if (!censusResponse.ok) throw new Error('Census address lookup unavailable');
+            const census = await censusResponse.json();
+            const matches = census.result?.addressMatches || [];
+            const suggestions = matches.slice(0, 6).map((match) => ({
+              label: match.matchedAddress,
+              lat: match.coordinates?.y,
+              lon: match.coordinates?.x,
+            }));
+            setAddressSuggestions(suggestions);
+            if (!suggestions.length) setAddressLookupError('No matching address found. Check the spelling or enter it manually.');
+          } catch {
+            setAddressSuggestions([]);
+            setAddressLookupError(error.name === 'AbortError' ? 'Address lookup timed out.' : 'Address lookup is unavailable. You can enter the address manually.');
+          }
+      } finally {
+        clearTimeout(timeoutId);
+        setAddressLookupLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [job.address, job.propertyLoaded]);
 
   const updateJob = (patch) => setJob((current) => ({ ...current, ...patch, updatedAt: new Date().toISOString() }));
-  const filteredAddresses = sampleAddresses.filter((item) => item.toLowerCase().includes(job.address.toLowerCase()));
   const totals = useMemo(() => calculateEstimate(job, catalog), [job, catalog]);
 
-  const chooseAddress = (address) => updateJob({ address, propertyLoaded: true, measurementMode: 'property', planes: [{ id: 1, name: 'Main roof', area: 2420, pitch: 6 }, { id: 2, name: 'Garage', area: 480, pitch: 5 }] });
+  const chooseAddress = (address) => {
+    updateJob({ address: typeof address === 'string' ? address : address.label, propertyLoaded: false, measurementMode: 'property', lookupResolved: true });
+    setAddressSuggestions([]);
+    setAddressLookupError('');
+  };
   const saveDraft = (status = 'draft') => {
     const saved = { ...job, status, updatedAt: new Date().toISOString(), customer: job.customer || 'Unnamed customer' };
     setJobs((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
@@ -156,7 +205,25 @@ function App() {
   const loadJob = (saved) => { setJob(saved); setActiveTab('estimate'); setToast('Job loaded.'); };
   const useLocation = () => {
     if (!navigator.geolocation) { setToast('Location is not available on this device.'); return; }
-    navigator.geolocation.getCurrentPosition(() => chooseAddress('Current location · property lookup ready'), () => setToast('Location permission was denied.'));
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      setAddressLookupLoading(true);
+      setAddressLookupError('');
+      try {
+        const response = await fetch(`https://photon.komoot.io/reverse?lon=${coords.longitude}&lat=${coords.latitude}&limit=1&lang=en`);
+        if (!response.ok) throw new Error('Reverse geocoding failed');
+        const data = await response.json();
+        const feature = data.features?.[0];
+        const p = feature?.properties || {};
+        const label = [p.housenumber, p.street, p.city || p.town || p.village, p.state, p.postcode].filter(Boolean).join(', ');
+        if (!label) throw new Error('No address found for this location');
+        chooseAddress(label);
+        setToast('Address resolved from your location.');
+      } catch {
+        setAddressLookupError('Could not resolve an address at this location.');
+      } finally {
+        setAddressLookupLoading(false);
+      }
+    }, () => setToast('Location permission was denied.'));
   };
   const updatePlane = (id, patch) => updateJob({ planes: job.planes.map((plane) => plane.id === id ? { ...plane, ...patch } : plane) });
   const addPlane = () => updateJob({ planes: [...job.planes, { id: Date.now(), name: `Roof plane ${job.planes.length + 1}`, area: 0, pitch: 6 }] });
@@ -209,9 +276,9 @@ function App() {
               <div className="card-content">
                 <CardHeading title="Job details" description="Keep the customer and job address attached to every estimate." icon={<UserRound size={20} />} />
                 <div className="job-fields"><label>Customer name<input value={job.customer} onChange={(e) => updateJob({ customer: e.target.value })} placeholder="e.g. Alex Morgan" /></label><label>Phone <input value={job.phone} onChange={(e) => updateJob({ phone: e.target.value })} placeholder="(555) 000-0000" /></label></div>
-                <div className="address-wrap"><MapPin size={18} /><input value={job.address} onChange={(event) => { updateJob({ address: event.target.value, propertyLoaded: false }); setAddressFocused(true); }} onFocus={() => setAddressFocused(true)} placeholder="Enter job address" />{job.address && <button className="clear-button" onClick={() => updateJob({ address: '', propertyLoaded: false })}><X size={16} /></button>}<button className="location-button" onClick={useLocation}><Crosshair size={15} /> Use my location</button>{addressFocused && job.address && filteredAddresses.length > 0 && <div className="suggestions">{filteredAddresses.map((item) => <button key={item} onMouseDown={() => { chooseAddress(item); setAddressFocused(false); }}><MapPin size={15} /><span>{item}</span><span className="suggestion-type">Property data</span></button>)}</div>}</div>
+                <div className="address-wrap"><MapPin size={18} /><input value={job.address} onChange={(event) => { updateJob({ address: event.target.value, propertyLoaded: false, lookupResolved: false }); setAddressFocused(true); }} onFocus={() => setAddressFocused(true)} placeholder="Enter job address" />{job.address && <button className="clear-button" onClick={() => updateJob({ address: '', propertyLoaded: false, lookupResolved: false })}><X size={16} /></button>}<button className="location-button" onClick={useLocation}><Crosshair size={15} /> Use my location</button>{addressFocused && (addressLookupLoading || addressSuggestions.length > 0 || addressLookupError) && <div className="suggestions">{addressLookupLoading ? <div className="lookup-loading">Searching addresses...</div> : addressSuggestions.map((item) => <button key={`${item.lat}-${item.lon}-${item.label}`} onMouseDown={() => { chooseAddress(item); setAddressFocused(false); }}><MapPin size={15} /><span>{item.label}</span><span className="suggestion-type">Address match</span></button>)}{addressLookupError && <div className="lookup-loading error">{addressLookupError}</div>}</div>}</div>
                 <div className="mode-toggle"><ModeButton active={job.measurementMode === 'property'} onClick={() => updateJob({ measurementMode: 'property' })} icon={<Building2 size={16} />} title="Property lookup" detail="Satellite + roof data" /><ModeButton active={job.measurementMode === 'manual'} onClick={() => updateJob({ measurementMode: 'manual' })} icon={<ScanLine size={16} />} title="Manual / AR measure" detail="New build or verify" /></div>
-                {job.measurementMode === 'manual' ? <div className="ar-callout"><div className="ar-icon"><Ruler size={21} /></div><div><b>Manual measurement workspace</b><p>Trace each roof plane with a native AR camera, then enter the verified area and pitch below.</p></div><button className="outline-button" onClick={() => setToast('AR camera handoff is ready for native mobile integration.')}>Start AR <ArrowRight size={15} /></button></div> : <div className={job.propertyLoaded ? 'lookup-success' : 'lookup-hint'}>{job.propertyLoaded ? <><Check size={16} /><span><b>Property data loaded</b> · verify every plane before ordering</span></> : <><CircleHelp size={16} /><span>Existing home? Search it. New build? Choose manual / AR measure.</span></>}</div>}
+                {job.measurementMode === 'manual' ? <div className="ar-callout"><div className="ar-icon"><Ruler size={21} /></div><div><b>Manual measurement workspace</b><p>Trace each roof plane with a native AR camera, then enter the verified area and pitch below.</p></div><button className="outline-button" onClick={() => setToast('AR camera handoff is ready for native mobile integration.')}>Start AR <ArrowRight size={15} /></button></div> : <div className={job.lookupResolved ? 'lookup-success' : 'lookup-hint'}>{job.lookupResolved ? <><Check size={16} /><span><b>Address resolved</b> · Enter and verify roof planes below</span></> : <><CircleHelp size={16} /><span>Existing home? Search it. New build? Choose manual / AR measure.</span></>}</div>}
               </div>
             </div>
 
