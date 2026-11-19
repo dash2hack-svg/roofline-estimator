@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Geolocation } from '@capacitor/geolocation';
+import { Camera as NativeCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Network } from '@capacitor/network';
+import { Share } from '@capacitor/share';
 import {
-  ArrowRight, BadgeDollarSign, Building2, Check, ChevronDown, CircleHelp, Compass,
+  ArrowRight, BadgeDollarSign, Building2, Camera, Check, ChevronDown, CircleHelp, Compass,
   Crosshair, FileText, Hammer, MapPin, Menu, Plus, Ruler, Save, ScanLine, Search,
   Settings2, ShieldCheck, Sparkles, Trash2, UserRound, X
 } from 'lucide-react';
@@ -131,11 +135,19 @@ function App() {
   const [addressLookupLoading, setAddressLookupLoading] = useState(false);
   const [addressLookupError, setAddressLookupError] = useState('');
   const [catalogType, setCatalogType] = useState('shingle');
+  const [isOnline, setIsOnline] = useState(true);
+  const [photos, setPhotos] = useState([]);
   const [catalogForm, setCatalogForm] = useState({ name: '', brand: '', price: '', coverage: '1', unit: 'bundle' });
 
   useEffect(() => localStorage.setItem('roofline-catalog', JSON.stringify(catalog)), [catalog]);
   useEffect(() => localStorage.setItem('roofline-jobs', JSON.stringify(jobs)), [jobs]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 2800); return () => clearTimeout(timer); }, [toast]);
+  useEffect(() => {
+    let removeListener;
+    Network.getStatus().then(({ connected }) => setIsOnline(connected)).catch(() => setIsOnline(navigator.onLine));
+    Network.addListener('networkStatusChange', ({ connected }) => setIsOnline(connected)).then((listener) => { removeListener = listener.remove; }).catch(() => {});
+    return () => { if (removeListener) removeListener(); };
+  }, []);
   useEffect(() => {
     const query = job.address.trim();
     if (query.length < 5 || job.propertyLoaded) {
@@ -204,8 +216,7 @@ function App() {
   const startNew = () => { setJob(newEstimate()); setActiveTab('estimate'); setToast('New estimate started.'); };
   const loadJob = (saved) => { setJob(saved); setActiveTab('estimate'); setToast('Job loaded.'); };
   const useLocation = () => {
-    if (!navigator.geolocation) { setToast('Location is not available on this device.'); return; }
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+    const resolve = async ({ coords }) => {
       setAddressLookupLoading(true);
       setAddressLookupError('');
       try {
@@ -223,11 +234,39 @@ function App() {
       } finally {
         setAddressLookupLoading(false);
       }
-    }, () => setToast('Location permission was denied.'));
+    };
+    if (window.Capacitor?.isNativePlatform?.()) {
+      Promise.all([Geolocation.checkPermissions(), Geolocation.requestPermissions({ permissions: ['location'] })])
+        .then(() => Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 12000 }))
+        .then((position) => resolve({ coords: position.coords }))
+        .catch(() => setToast('Location permission was denied or unavailable.'));
+      return;
+    }
+    if (!navigator.geolocation) { setToast('Location is not available on this device.'); return; }
+    navigator.geolocation.getCurrentPosition(resolve, () => setToast('Location permission was denied.'));
   };
   const updatePlane = (id, patch) => updateJob({ planes: job.planes.map((plane) => plane.id === id ? { ...plane, ...patch } : plane) });
   const addPlane = () => updateJob({ planes: [...job.planes, { id: Date.now(), name: `Roof plane ${job.planes.length + 1}`, area: 0, pitch: 6 }] });
   const removePlane = (id) => updateJob({ planes: job.planes.length > 1 ? job.planes.filter((plane) => plane.id !== id) : job.planes });
+  const capturePhoto = async () => {
+    try {
+      const photo = await NativeCamera.getPhoto({ quality: 82, resultType: CameraResultType.DataUrl, source: CameraSource.Camera, allowEditing: false });
+      setPhotos((current) => [...current, photo.dataUrl].slice(-12));
+      setToast('Roof photo captured.');
+    } catch (error) {
+      if (error?.message?.toLower !== 'user cancelled photos') setToast('Camera permission was denied or unavailable.');
+    }
+  };
+  const shareEstimate = async () => {
+    try {
+      await Share.share({
+        title: `Roofline estimate — ${job.customer || 'New job'}`,
+        text: `${job.customer || 'Customer'}\n${job.address || 'Address not entered'}\nProject total: ${money(totals.total)}\nRoof surface: ${Math.round(totals.surfaceArea)} sq ft\nOrder quantity: ${totals.adjustedSquares.toFixed(1)} squares`,
+      });
+    } catch {
+      setToast('Sharing is unavailable on this device.');
+    }
+  };
   const addProduct = (event) => {
     event.preventDefault();
     const fallbackPrice = { shingle: 39.95, underlayment: 74.95, ice: 69.95, ridge: 58.5, starter: 46.5, flashing: 12.95, fasteners: 74.95, ventilation: 24.95 }[catalogType];
@@ -258,7 +297,7 @@ function App() {
           <NavButton active={activeTab === 'jobs'} onClick={() => setActiveTab('jobs')}>Jobs <span className="nav-pill">{jobs.length}</span></NavButton>
           <NavButton active={activeTab === 'catalog'} onClick={() => setActiveTab('catalog')}>Catalog</NavButton>
         </nav>
-        <div className="top-actions"><span className="sync-status"><span className="sync-dot" /> Saved on this device</span><button className="avatar">JM</button><button className="menu-toggle" onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button></div>
+        <div className="top-actions"><span className="sync-status"><span className={isOnline ? 'sync-dot' : 'sync-dot offline'} /> {isOnline ? 'Connected · saved on this device' : 'Offline · saved on this device'}</span><button className="avatar">JM</button><button className="menu-toggle" onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? <X size={20} /> : <Menu size={20} />}</button></div>
       </header>
 
       <main className="page">
@@ -278,7 +317,8 @@ function App() {
                 <div className="job-fields"><label>Customer name<input value={job.customer} onChange={(e) => updateJob({ customer: e.target.value })} placeholder="e.g. Alex Morgan" /></label><label>Phone <input value={job.phone} onChange={(e) => updateJob({ phone: e.target.value })} placeholder="(555) 000-0000" /></label></div>
                 <div className="address-wrap"><MapPin size={18} /><input value={job.address} onChange={(event) => { updateJob({ address: event.target.value, propertyLoaded: false, lookupResolved: false }); setAddressFocused(true); }} onFocus={() => setAddressFocused(true)} placeholder="Enter job address" />{job.address && <button className="clear-button" onClick={() => updateJob({ address: '', propertyLoaded: false, lookupResolved: false })}><X size={16} /></button>}<button className="location-button" onClick={useLocation}><Crosshair size={15} /> Use my location</button>{addressFocused && (addressLookupLoading || addressSuggestions.length > 0 || addressLookupError) && <div className="suggestions">{addressLookupLoading ? <div className="lookup-loading">Searching addresses...</div> : addressSuggestions.map((item) => <button key={`${item.lat}-${item.lon}-${item.label}`} onMouseDown={() => { chooseAddress(item); setAddressFocused(false); }}><MapPin size={15} /><span>{item.label}</span><span className="suggestion-type">Address match</span></button>)}{addressLookupError && <div className="lookup-loading error">{addressLookupError}</div>}</div>}</div>
                 <div className="mode-toggle"><ModeButton active={job.measurementMode === 'property'} onClick={() => updateJob({ measurementMode: 'property' })} icon={<Building2 size={16} />} title="Property lookup" detail="Satellite + roof data" /><ModeButton active={job.measurementMode === 'manual'} onClick={() => updateJob({ measurementMode: 'manual' })} icon={<ScanLine size={16} />} title="Manual / AR measure" detail="New build or verify" /></div>
-                {job.measurementMode === 'manual' ? <div className="ar-callout"><div className="ar-icon"><Ruler size={21} /></div><div><b>Manual measurement workspace</b><p>Trace each roof plane with a native AR camera, then enter the verified area and pitch below.</p></div><button className="outline-button" onClick={() => setToast('AR camera handoff is ready for native mobile integration.')}>Start AR <ArrowRight size={15} /></button></div> : <div className={job.lookupResolved ? 'lookup-success' : 'lookup-hint'}>{job.lookupResolved ? <><Check size={16} /><span><b>Address resolved</b> · Enter and verify roof planes below</span></> : <><CircleHelp size={16} /><span>Existing home? Search it. New build? Choose manual / AR measure.</span></>}</div>}
+                {job.measurementMode === 'manual' ? <div className="ar-callout"><div className="ar-icon"><Ruler size={21} /></div><div><b>Manual measurement workspace</b><p>Capture roof photos or trace each plane, then enter the verified area and pitch below.</p></div><button className="outline-button" onClick={capturePhoto}><Camera size={15} /> Capture photo</button></div> : <div className={job.lookupResolved ? 'lookup-success' : 'lookup-hint'}>{job.lookupResolved ? <><Check size={16} /><span><b>Address resolved</b> · Enter and verify roof planes below</span></> : <><CircleHelp size={16} /><span>Existing home? Search it. New build? Choose manual / AR measure.</span></>}</div>}
+                {photos.length > 0 && <div className="photo-strip">{photos.map((photo, index) => <img key={`${index}-${photo.slice(-20)}`} src={photo} alt={`Roof photo ${index + 1}`} />)}</div>}
               </div>
             </div>
 
@@ -289,7 +329,7 @@ function App() {
             <div className="step-card"><StepNumber number="04" /><div className="card-content"><CardHeading title="Add project costs" description="Make labor, tear-off, disposal, permits, and tax visible instead of hiding them in markup." icon={<FileText size={20} />} /><div className="input-grid cost-grid"><CostInput label="Labor / square" value={job.laborRate} prefix="$" suffix="/ sq" onChange={(value) => updateJob({ laborRate: value })} /><CostInput label="Tear-off" value={job.tearOff} prefix="$" onChange={(value) => updateJob({ tearOff: value })} /><CostInput label="Disposal" value={job.disposal} prefix="$" onChange={(value) => updateJob({ disposal: value })} /><CostInput label="Permit / misc." value={job.permit} prefix="$" onChange={(value) => updateJob({ permit: value })} /><CostInput label="Sales tax" value={job.tax} suffix="%" onChange={(value) => updateJob({ tax: Math.min(30, Math.max(0, value)) })} /><CostInput label="Markup" value={job.markup} suffix="%" onChange={(value) => updateJob({ markup: Math.min(100, Math.max(0, value)) })} /></div></div></div>
           </section>
 
-          <EstimatePanel job={job} totals={totals} onUpdate={updateJob} onSave={saveDraft} onProposal={() => setProposalOpen(true)} />
+          <EstimatePanel job={job} totals={totals} onUpdate={updateJob} onSave={saveDraft} onProposal={() => setProposalOpen(true)} onShare={shareEstimate} />
         </div>}
       </main>
       {toast && <div className="toast"><Check size={16} /> {toast}</div>}
@@ -336,7 +376,8 @@ function ProductSelect({ label, value, options, onChange, isShingle }) {
   </select><ChevronDown size={16} /><span className="product-price">{money(selected.price)}</span></div></label>;
 }
 function EstimateLine({ name, quantityText, cost }) { return <div className="estimate-line"><div><b>{name}</b><span>{quantityText}</span></div><strong>{money(cost)}</strong></div>; }
-function EstimatePanel({ job, totals, onUpdate, onSave, onProposal }) { return <aside className="estimate-panel"><div className="estimate-top"><div><span className="estimate-label">ESTIMATE PREVIEW</span><h2>{job.customer || 'New job'}</h2></div><button className="icon-button" onClick={() => onSave()}><Save size={15} /></button></div><div className="estimate-address"><MapPin size={15} /> <span>{job.address || 'No address selected'}</span><span className={job.propertyLoaded || job.measurementMode === 'manual' ? 'confidence good' : 'confidence'}>{job.propertyLoaded || job.measurementMode === 'manual' ? 'Verified' : 'Draft'}</span></div><div className="total-block"><span>Estimated project total</span><strong>{money(totals.total)}</strong><small>Includes {job.markup}% markup · {job.tax}% tax</small></div><div className="breakdown"><div className="breakdown-heading"><b>Materials</b><span>{money(totals.materialCost)}</span></div><EstimateLine name={totals.selected.shingle.name} quantityText={`${totals.quantities.shingle} bundles`} cost={totals.quantities.shingle * totals.selected.shingle.price} /><EstimateLine name={totals.selected.underlayment.name} quantityText={`${totals.quantities.underlayment} rolls`} cost={totals.quantities.underlayment * totals.selected.underlayment.price} /><EstimateLine name={totals.selected.ice.name} quantityText={`${totals.quantities.ice} rolls`} cost={totals.quantities.ice * totals.selected.ice.price} /><EstimateLine name={totals.selected.ridge.name} quantityText={`${totals.quantities.ridge} bundles`} cost={totals.quantities.ridge * totals.selected.ridge.price} /><div className="breakdown-heading labor"><b>Labor + project costs</b><span>{money(totals.laborCost + job.tearOff + job.disposal + job.permit + totals.tax)}</span></div><EstimateLine name="Installation labor" quantityText={`${totals.squares.toFixed(1)} squares`} cost={totals.laborCost} /></div><div className="estimate-footer"><div><span>Subtotal</span><b>{money(totals.subtotal)}</b></div><button className="primary-button" onClick={onProposal}>Create proposal <ArrowRight size={16} /></button><button className="save-button" onClick={() => onSave()}><Save size={16} /> Save draft</button></div><div className="accuracy-note"><ShieldCheck size={16} /><span>Confirm plane measurements, product coverage, and supplier pricing before ordering.</span></div></aside>; }
+function ShareIcon() { return <ArrowRight size={14} />; }
+function EstimatePanel({ job, totals, onUpdate, onSave, onProposal, onShare }) { return <aside className="estimate-panel"><div className="estimate-top"><div><span className="estimate-label">ESTIMATE PREVIEW</span><h2>{job.customer || 'New job'}</h2></div><div className="estimate-actions"><button className="icon-button" onClick={onShare} aria-label="Share estimate"><ShareIcon /></button><button className="icon-button" onClick={() => onSave()} aria-label="Save draft"><Save size={15} /></button></div></div><div className="estimate-address"><MapPin size={15} /> <span>{job.address || 'No address selected'}</span><span className={job.propertyLoaded || job.measurementMode === 'manual' ? 'confidence good' : 'confidence'}>{job.propertyLoaded || job.measurementMode === 'manual' ? 'Verified' : 'Draft'}</span></div><div className="total-block"><span>Estimated project total</span><strong>{money(totals.total)}</strong><small>Includes {job.markup}% markup · {job.tax}% tax</small></div><div className="breakdown"><div className="breakdown-heading"><b>Materials</b><span>{money(totals.materialCost)}</span></div><EstimateLine name={totals.selected.shingle.name} quantityText={`${totals.quantities.shingle} bundles`} cost={totals.quantities.shingle * totals.selected.shingle.price} /><EstimateLine name={totals.selected.underlayment.name} quantityText={`${totals.quantities.underlayment} rolls`} cost={totals.quantities.underlayment * totals.selected.underlayment.price} /><EstimateLine name={totals.selected.ice.name} quantityText={`${totals.quantities.ice} rolls`} cost={totals.quantities.ice * totals.selected.ice.price} /><EstimateLine name={totals.selected.ridge.name} quantityText={`${totals.quantities.ridge} bundles`} cost={totals.quantities.ridge * totals.selected.ridge.price} /><div className="breakdown-heading labor"><b>Labor + project costs</b><span>{money(totals.laborCost + job.tearOff + job.disposal + job.permit + totals.tax)}</span></div><EstimateLine name="Installation labor" quantityText={`${totals.squares.toFixed(1)} squares`} cost={totals.laborCost} /></div><div className="estimate-footer"><div><span>Subtotal</span><b>{money(totals.subtotal)}</b></div><button className="primary-button" onClick={onProposal}>Create proposal <ArrowRight size={16} /></button><button className="save-button" onClick={() => onSave()}><Save size={16} /> Save draft</button></div><div className="accuracy-note"><ShieldCheck size={16} /><span>Confirm plane measurements, product coverage, and supplier pricing before ordering.</span></div></aside>; }
 
 function Jobs({ jobs, onNew, onLoad, onDelete }) { return <div className="jobs-panel"><div className="jobs-toolbar"><div className="search-box"><Search size={16} /><input placeholder="Search jobs" /></div><button className="primary-button compact-button" onClick={onNew}><Plus size={16} /> New estimate</button></div>{jobs.length === 0 ? <EmptyState icon={<FileText size={26} />} title="No saved jobs yet" text="Save a draft from the estimate screen and it will appear here on this device." action="Start an estimate" onClick={onNew} /> : <div className="jobs-list">{jobs.map((item) => <div className="job-row" key={item.id}><div className="job-icon"><Building2 size={18} /></div><div className="job-main"><b>{item.customer || 'Unnamed customer'}</b><span>{item.address || 'No address'} · {new Date(item.updatedAt).toLocaleDateString()}</span></div><span className={item.status === 'proposal' ? 'job-status proposal' : 'job-status'}>{item.status}</span><button className="outline-button" onClick={() => onLoad(item)}>Open</button><button className="delete-plane" onClick={() => onDelete(item.id)} aria-label="Delete saved job"><Trash2 size={15} /></button></div>)}</div>}</div>; }
 function Catalog({ catalog, type, setType, form, setForm, onAdd, onDelete, onPriceChange, onReset }) {
