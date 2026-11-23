@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 const defaultCatalog = {
   shingle: [
@@ -139,10 +139,19 @@ function App() {
   const [catalogType, setCatalogType] = useState('shingle');
   const [isOnline, setIsOnline] = useState(true);
   const [photos, setPhotos] = useState([]);
+  const [sensorPitch, setSensorPitch] = useState(null);
+  const [pitchListening, setPitchListening] = useState(false);
+  const [selectedPlaneId, setSelectedPlaneId] = useState(null);
+  const [jobsSearch, setJobsSearch] = useState('');
   const [catalogForm, setCatalogForm] = useState({ name: '', brand: '', price: '', coverage: '1', unit: 'bundle' });
 
   useEffect(() => localStorage.setItem('roofline-catalog', JSON.stringify(catalog)), [catalog]);
   useEffect(() => localStorage.setItem('roofline-jobs', JSON.stringify(jobs)), [jobs]);
+  useEffect(() => {
+    const draft = readStorage('roofline-current-draft', null);
+    if (draft) setJob((current) => ({ ...current, ...draft }));
+  }, []);
+  useEffect(() => { localStorage.setItem('roofline-current-draft', JSON.stringify(job)); }, [job]);
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 2800); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => {
     let removeListener;
@@ -211,7 +220,7 @@ function App() {
     setAddressLookupError('');
   };
   const saveDraft = (status = 'draft') => {
-    const saved = { ...job, status, updatedAt: new Date().toISOString(), customer: job.customer || 'Unnamed customer' };
+    const saved = { ...job, status, updatedAt: new Date().toISOString(), customer: job.customer.trim() || 'Unnamed customer' };
     setJobs((current) => [saved, ...current.filter((item) => item.id !== saved.id)]);
     setJob(saved);
     setToast(status === 'proposal' ? 'Proposal saved to Jobs.' : 'Draft saved locally.');
@@ -284,10 +293,29 @@ function App() {
         const permission = await DeviceOrientationEvent.requestPermission();
         if (permission !== 'granted') { setToast('Motion permission is required for pitch sensing.'); return; }
       }
-      setToast('Hold the phone on the roof slope, then tap Verify.');
+      if (!job.planes.length) addPlane();
+      setPitchListening(true);
+      setSelectedPlaneId(job.planes[0]?.id || null);
+      setToast('Hold the phone against the roof slope. The pitch is updating live.');
+      window.addEventListener('deviceorientation', readPitchAngle, { passive: true });
     } catch {
       setToast('Pitch sensing is unavailable. Enter pitch manually.');
     }
+  };
+  const readPitchAngle = (event) => {
+    const beta = Number(event.beta);
+    const gamma = Number(event.gamma);
+    if (!Number.isFinite(beta) || !Number.isFinite(gamma)) return;
+    const angle = Math.min(90, Math.max(0, Math.round(Math.abs(gamma) || Math.abs(beta))));
+    const rise = Math.tan(angle * Math.PI / 180) * 12;
+    setSensorPitch({ angle, pitch: Math.round(rise * 10) / 10 });
+  };
+  const applyPitch = () => {
+    if (!sensorPitch || !selectedPlaneId) { setToast('Start pitch sensing and select a roof plane first.'); return; }
+    updatePlane(selectedPlaneId, { pitch: sensorPitch.pitch });
+    window.removeEventListener('deviceorientation', readPitchAngle);
+    setPitchListening(false);
+    setToast(`Pitch applied: ${sensorPitch.pitch}/12.`);
   };
   const capturePhoto = async () => {
     try {
@@ -363,7 +391,7 @@ function App() {
               </div>
             </div>
 
-            <div className="step-card"><StepNumber number="02" /><div className="card-content"><CardHeading title="Measure roof planes" description="Enter each plane's true eave-to-ridge length and width, then verify its pitch." icon={<Compass size={20} />} /><button className="add-plane pitch-tool" onClick={readPitch}><Compass size={15} /> Use pitch sensor</button><div className="plane-list">{job.planes.map((plane, index) => {
+            <div className="step-card"><StepNumber number="02" /><div className="card-content"><CardHeading title="Measure roof planes" description="Enter each plane's true eave-to-ridge length and width, then verify its pitch." icon={<Compass size={20} />} /><button className="add-plane pitch-tool" onClick={readPitch}><Compass size={15} /> {pitchListening ? 'Pitch sensor active' : 'Use pitch sensor'}</button>{pitchListening && <div className="pitch-live"><div><span>Measured angle</span><b>{sensorPitch ? `${sensorPitch.angle}°` : 'Reading...'}</b></div><div><span>Roof pitch</span><b>{sensorPitch ? `${sensorPitch.pitch}/12` : '—'}</b></div><select value={selectedPlaneId || ''} onChange={(event) => setSelectedPlaneId(Number(event.target.value))}>{job.planes.map((plane) => <option value={plane.id} key={plane.id}>{plane.name}</option>)}</select><button className="primary-button compact-button" onClick={applyPitch}>Apply pitch</button></div>}<div className="plane-list">{job.planes.map((plane, index) => {
               const length = Number(plane.length) || 0;
               const width = Number(plane.width) || 0;
               const pitch = Number(plane.pitch) || 0;
@@ -376,7 +404,11 @@ function App() {
             <div className="step-card"><StepNumber number="04" /><div className="card-content"><CardHeading title="Add project costs" description="Make labor, tear-off, disposal, permits, and tax visible instead of hiding them in markup." icon={<FileText size={20} />} /><div className="input-grid cost-grid"><CostInput label="Labor / square" value={job.laborRate} prefix="$" suffix="/ sq" onChange={(value) => updateJob({ laborRate: value })} /><CostInput label="Tear-off" value={job.tearOff} prefix="$" onChange={(value) => updateJob({ tearOff: value })} /><CostInput label="Disposal" value={job.disposal} prefix="$" onChange={(value) => updateJob({ disposal: value })} /><CostInput label="Permit / misc." value={job.permit} prefix="$" onChange={(value) => updateJob({ permit: value })} /><CostInput label="Sales tax" value={job.tax} suffix="%" onChange={(value) => updateJob({ tax: Math.min(30, Math.max(0, value)) })} /><CostInput label="Markup" value={job.markup} suffix="%" onChange={(value) => updateJob({ markup: Math.min(100, Math.max(0, value)) })} /></div></div></div>
           </section>
 
-          <EstimatePanel job={job} totals={totals} onUpdate={updateJob} onSave={saveDraft} onProposal={() => setProposalOpen(true)} onShare={shareEstimate} />
+          <EstimatePanel job={job} totals={totals} onUpdate={updateJob} onSave={saveDraft} onProposal={() => {
+            if (!job.address.trim()) { setToast('Enter a job address before creating a proposal.'); return; }
+            if (!totals.ready) { setToast('Add and verify every roof plane before creating a proposal.'); return; }
+            setProposalOpen(true);
+          }} onShare={shareEstimate} />
         </div>}
       </main>
       {toast && <div className="toast"><Check size={16} /> {toast}</div>}
@@ -439,7 +471,11 @@ function EstimateLine({ name, quantityText, cost }) { return <div className="est
 function ShareIcon() { return <ArrowRight size={14} />; }
 function EstimatePanel({ job, totals, onUpdate, onSave, onProposal, onShare }) { return <aside className="estimate-panel"><div className="estimate-top"><div><span className="estimate-label">ESTIMATE PREVIEW</span><h2>{job.customer || 'New job'}</h2></div><div className="estimate-actions"><button className="icon-button" onClick={onShare} aria-label="Share estimate"><ShareIcon /></button><button className="icon-button" onClick={() => onSave()} aria-label="Save draft"><Save size={15} /></button></div></div><div className="estimate-address"><MapPin size={15} /> <span>{job.address || 'No address selected'}</span><span className={job.propertyLoaded || job.measurementMode === 'manual' ? 'confidence good' : 'confidence'}>{job.propertyLoaded || job.measurementMode === 'manual' ? 'Verified' : 'Draft'}</span></div><div className="total-block"><span>Estimated project total</span><strong>{money(totals.total)}</strong><small>Includes {job.markup}% markup · {job.tax}% tax</small></div><div className="breakdown"><div className="breakdown-heading"><b>Materials</b><span>{money(totals.materialCost)}</span></div><EstimateLine name={totals.selected.shingle.name} quantityText={`${totals.quantities.shingle} bundles`} cost={totals.quantities.shingle * totals.selected.shingle.price} /><EstimateLine name={totals.selected.underlayment.name} quantityText={`${totals.quantities.underlayment} rolls`} cost={totals.quantities.underlayment * totals.selected.underlayment.price} /><EstimateLine name={totals.selected.ice.name} quantityText={`${totals.quantities.ice} rolls`} cost={totals.quantities.ice * totals.selected.ice.price} /><EstimateLine name={totals.selected.ridge.name} quantityText={`${totals.quantities.ridge} bundles`} cost={totals.quantities.ridge * totals.selected.ridge.price} /><div className="breakdown-heading labor"><b>Labor + project costs</b><span>{money(totals.laborCost + job.tearOff + job.disposal + job.permit + totals.tax)}</span></div><EstimateLine name="Installation labor" quantityText={`${totals.squares.toFixed(1)} squares`} cost={totals.laborCost} /></div><div className="estimate-footer"><div><span>Subtotal</span><b>{money(totals.subtotal)}</b></div><button className="primary-button" onClick={onProposal}>Create proposal <ArrowRight size={16} /></button><button className="save-button" onClick={() => onSave()}><Save size={16} /> Save draft</button></div><div className="accuracy-note"><ShieldCheck size={16} /><span>Confirm plane measurements, product coverage, and supplier pricing before ordering.</span></div></aside>; }
 
-function Jobs({ jobs, onNew, onLoad, onDelete }) { return <div className="jobs-panel"><div className="jobs-toolbar"><div className="search-box"><Search size={16} /><input placeholder="Search jobs" /></div><button className="primary-button compact-button" onClick={onNew}><Plus size={16} /> New estimate</button></div>{jobs.length === 0 ? <EmptyState icon={<FileText size={26} />} title="No saved jobs yet" text="Save a draft from the estimate screen and it will appear here on this device." action="Start an estimate" onClick={onNew} /> : <div className="jobs-list">{jobs.map((item) => <div className="job-row" key={item.id}><div className="job-icon"><Building2 size={18} /></div><div className="job-main"><b>{item.customer || 'Unnamed customer'}</b><span>{item.address || 'No address'} · {new Date(item.updatedAt).toLocaleDateString()}</span></div><span className={item.status === 'proposal' ? 'job-status proposal' : 'job-status'}>{item.status}</span><button className="outline-button" onClick={() => onLoad(item)}>Open</button><button className="delete-plane" onClick={() => onDelete(item.id)} aria-label="Delete saved job"><Trash2 size={15} /></button></div>)}</div>}</div>; }
+function Jobs({ jobs, onNew, onLoad, onDelete }) {
+  const [search, setSearch] = useState('');
+  const visible = jobs.filter((item) => `${item.customer || ''} ${item.address || ''}`.toLowerCase().includes(search.toLowerCase()));
+  return <div className="jobs-panel"><div className="jobs-toolbar"><div className="search-box"><Search size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search customer or address" /></div><button className="primary-button compact-button" onClick={onNew}><Plus size={16} /> New estimate</button></div>{visible.length === 0 ? <EmptyState icon={<FileText size={26} />} title={jobs.length ? 'No matching jobs' : 'No saved jobs yet'} text={jobs.length ? 'Try another customer or address.' : 'Save a draft from the estimate screen and it will appear here on this device.'} action="Start an estimate" onClick={onNew} /> : <div className="jobs-list">{visible.map((item) => <div className="job-row" key={item.id}><div className="job-icon"><Building2 size={18} /></div><div className="job-main"><b>{item.customer || 'Unnamed customer'}</b><span>{item.address || 'No address'} · {new Date(item.updatedAt).toLocaleDateString()}</span></div><span className={item.status === 'proposal' ? 'job-status proposal' : 'job-status'}>{item.status}</span><button className="outline-button" onClick={() => onLoad(item)}>Open</button><button className="delete-plane" onClick={() => { if (window.confirm(`Delete ${item.customer || 'this job'}?`)) onDelete(item.id); }} aria-label="Delete saved job"><Trash2 size={15} /></button></div>)}</div>}</div>;
+}
 function Catalog({ catalog, type, setType, form, setForm, onAdd, onDelete, onPriceChange, onReset }) {
   const [search, setSearch] = useState('');
   const [brand, setBrand] = useState('All brands');
